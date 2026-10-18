@@ -1,0 +1,5 @@
+5d702fcf358ccbe5245970d8e35af40cfd4893bd869af605d8129eb532818f00  runtime/python/python.exe
+e7cafc44db8aa433da8dd78303b9157f2c1dd509c4cbfcd8418081b7e1d26a7a  tools/yt-dlp/yt-dlp.exe
+ed6be7f6ba79c6fec14124d7de3536c6fb1b1b3cce0dc54128ab43aebe6bc1fe  tools/deno/deno.exe
+f64d2268b7c63e68a2162390c26b6282da7d0dd20f8c2cffef49488148d9960e  tools/ffmpeg/ffmpeg.exe
+c43fc14980ab02993a5e1a93fa00a676d045e5824b6a736242f865e5ea199cfb  tools/ffmpeg/ffprobe.exe

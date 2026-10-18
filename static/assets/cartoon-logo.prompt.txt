@@ -1,0 +1,5 @@
+Tool: built-in image_gen.imagegen
+Transparent background: true
+Asset: cartoon-logo.png
+
+Use case: logo-brand. Asset type: a small standalone logo mark for the header of Cartoon Downloader, a Windows app for finding and downloading cartoons. Create one original friendly cartoon television emblem: a compact rounded blue television body, two short rounded antenna tips, and a bold white play triangle centered in the screen, with a small simple downward notch in the bottom silhouette suggesting a download. Modern polished flat illustration with very subtle depth, crisp bold shapes, minimal detail, readable at 32 pixels. Palette matches the app's existing electric blue #1486ff and sky blue accents, white central symbol; clean silhouette visible on both dark navy and light backgrounds. Square composition, emblem fills about 90 percent of the canvas with minimal even padding. Transparent background with actual alpha channel, no backdrop, no cast shadow outside the mark. No lettering, no wordmark, no text, no mockup, no watermark, no existing franchise characters. Generate a single centered final mark, not a sheet of variations.

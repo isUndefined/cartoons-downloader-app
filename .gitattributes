@@ -1,0 +1,7 @@
+* text=auto eol=lf
+*.bat text eol=crlf
+*.png binary
+
+# Dependency inventories refer to exact bytes; preserve vendor files verbatim.
+tools/** -text
+runtime/python/** -text

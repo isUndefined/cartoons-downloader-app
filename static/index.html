@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en" translate="no" class="notranslate">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="google" content="notranslate">
+    <title>Cartoon Downloader</title>
+    <link rel="icon" href="/static/assets/cartoon-logo.png" type="image/png">
+    <link rel="stylesheet" href="/static/app.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="icon-rail" aria-label="Main navigation">
+        <nav class="rail-nav">
+          <button class="rail-item active" data-view="discovery"
+            title="Discovery" aria-label="Discovery">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M3 11.5 12 4l9 7.5v8a1.5 1.5 0 0 1-1.5 1.5H15v-6H9v6H4.5A1.5 1.5 0 0 1 3 19.5z" />
+            </svg>
+            <span id="discoveryBadge" class="rail-badge hidden">0</span>
+          </button>
+          <button class="rail-item" data-view="downloads" title="Downloads"
+            aria-label="Downloads">
+            <svg viewBox="0 0 24 24">
+              <path d="M12 3v11m0 0 4-4m-4 4-4-4M4 18v2h16v-2" />
+            </svg>
+            <span id="queueBadge" class="rail-badge hidden">0</span>
+          </button>
+          <button class="rail-item" data-view="downloaded" title="Downloaded"
+            aria-label="Downloaded">
+            <svg viewBox="0 0 24 24">
+              <path d="M5 5h14v15H5zM8 3h8M8 12l2.5 2.5L16 9" />
+            </svg>
+            <span id="downloadedBadge" class="rail-badge hidden">0</span>
+          </button>
+          <button class="rail-item" data-view="devices" title="Devices"
+            aria-label="Devices">
+            <svg viewBox="0 0 24 24">
+              <rect x="7" y="2.5" width="10" height="19" rx="2" />
+              <path d="M10 18.5h4" />
+            </svg>
+            <span id="devicesBadge" class="rail-badge hidden">0</span>
+          </button>
+          <button class="rail-item" data-view="settings" title="Settings"
+            aria-label="Settings">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3" />
+              <path d="M14 2v4M8 10v4M16 18v4" />
+            </svg>
+          </button>
+        </nav>
+        <button id="exitBtn" class="rail-item" type="button"
+          title="Exit application"
+          aria-label="Exit application">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+            <path d="M12 2v10M18.36 6.64a9 9 0 1 1-12.73 0" />
+          </svg>
+        </button>
+      </aside>
+
+      <div class="workspace">
+        <header class="app-header">
+          <button class="brand-link" data-view="discovery">
+          <img class="brand-mark" src="/static/assets/cartoon-logo.png" width="36" height="36" alt="" aria-hidden="true"><strong>Cartoon Downloader</strong>
+        </button>
+          <div class="header-context" aria-live="polite">
+            <strong id="currentSection">Discovery</strong>
+            <span class="header-context-dot" aria-hidden="true"></span>
+            <span id="currentSectionHint">Fresh cartoons ready to browse</span>
+          </div>
+          <div class="header-actions" id="discoveryActions">
+            <button id="discoverBtn"
+              class="primary action-btn">＋ Find new cartoons</button>
+            <button id="refreshBtn"
+              class="dark-btn action-btn">↻ Refresh</button>
+          </div>
+        </header>
+
+        <main class="main-area">
+          <section id="view-discovery" class="view active discovery-view">
+            <div class="hero">
+              <div class="hero-copy">
+                <h1>Cartoon<br>Downloader</h1>
+                <h2>Discover. Download. Enjoy anywhere.</h2>
+                <p>Fresh cartoons found automatically, downloaded in the quality you choose, and ready to send to your device.</p>
+              </div>
+            </div>
+
+            <div id="discoveryProgress" class="discovery-progress hidden">
+              <div class="discovery-progress-copy">
+                <strong id="discoveryMessage">Preparing…</strong>
+                <span id="discoveryPercent">0%</span>
+              </div>
+              <div class="progress"><i id="discoveryBar"></i></div>
+              <div id="discoveryError" class="error hidden"></div>
+            </div>
+
+            <div class="discovery-columns">
+              <section class="media-zone">
+                <div class="zone-head">
+                  <div>
+                    <h2>Discovered cartoons</h2>
+                    <p><span id="newCount">0</span> of <span id="targetCount">10</span> ready to choose</p>
+                  </div>
+                  <div class="selection-actions">
+                    <button id="downloadLocalBtn"
+                      class="secondary compact hidden"
+                      disabled>↓ Download selected</button>
+                    <button id="downloadDeviceBtn"
+                      class="primary compact hidden"
+                      disabled>▣ Send to device</button>
+                  </div>
+                </div>
+                <div id="discoveryGrid" class="media-grid"></div>
+                <div id="discoveryPagination" class="pagination hidden"
+                  aria-label="Discovery pages"></div>
+                <div id="discoveryEmpty" class="empty-dark hidden">
+                  <div class="empty-copy">
+                    <h3>No cartoons yet</h3>
+                    <p
+                      id="emptyMessage">Run Discovery to fill the list with new cartoons.</p>
+                  </div>
+                  <button id="emptyDiscoverBtn"
+                    class="primary action-btn empty-primary">＋ Find new cartoons</button>
+                </div>
+              </section>
+
+              <aside class="downloads-zone">
+                <div class="zone-head downloads-head">
+                  <div>
+                    <h2>Downloads <span id="activeDownloadCount"></span></h2>
+                    <p id="downloadsSummary">No active downloads</p>
+                  </div>
+                </div>
+                <div id="downloadsRail" class="downloads-rail"></div>
+              </aside>
+            </div>
+          </section>
+
+          <section id="view-downloads" class="view page-view">
+            <div class="page-heading">
+              <div>
+                <h1>Downloads</h1>
+                <p>Current queue and recent jobs.</p>
+              </div>
+            </div>
+            <div id="downloadsPage" class="downloads-page hidden"></div>
+            <div id="failuresPagination" class="pagination hidden"
+              aria-label="Failed job pages"></div>
+            <div id="downloadsPageEmpty" class="empty-dark hidden">
+              <h3>Queue is empty</h3>
+              <p>Add cartoons from Discovery to start downloading.</p>
+            </div>
+          </section>
+
+          <section id="view-downloaded" class="view page-view">
+            <div class="page-heading">
+              <div>
+                <h1>Downloaded</h1>
+                <p>Your completed local and device downloads.</p>
+              </div>
+            </div>
+            <div id="downloadedGrid" class="media-grid downloaded-grid"></div>
+            <div id="downloadedPagination" class="pagination hidden"
+              aria-label="Downloaded pages"></div>
+            <div id="downloadedEmpty" class="empty-dark hidden">
+              <h3>Nothing downloaded yet</h3>
+              <p>Completed cartoons will appear here.</p>
+            </div>
+          </section>
+
+          <section id="view-devices" class="view page-view">
+            <div
+              class="page-heading"><div><h1>Devices</h1><p>Android devices connected through Windows MTP.</p></div><button id="refreshDevicesBtn" class="dark-btn action-btn"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></svg><span>Refresh devices</span></button></div>
+            <div id="deviceError" class="error hidden"></div>
+            <div id="deviceGrid" class="device-grid"></div>
+          </section>
+
+          <section id="view-settings" class="view page-view">
+            <div class="page-heading">
+              <div>
+                <h1>Settings</h1>
+                <p>Discovery rules, quality and download paths.</p>
+              </div>
+            </div>
+            <div class="settings-grid">
+              <div class="panel form-panel settings-discovery">
+                <div class="settings-panel-head">
+                  <div>
+                    <h2>Discovery</h2>
+                    <p class="muted">Control how new cartoons are selected.</p>
+                  </div>
+                </div>
+                <div class="settings-fields settings-fields-3">
+                  <label>New cartoons in list <input id="targetPending" type="number" min="1" max="100"></label>
+                  <label>Minimum duration, minutes <input id="minDuration" type="number" min="0" max="600"></label>
+                  <label>Maximum results per channel <input id="maxPerChannel" type="number" min="1" max="20"></label>
+                  <label
+                    class="check settings-full"><input id="includeRecent" type="checkbox"> Mix relevance with recent uploads</label>
+                  <p
+                    class="muted settings-note settings-full">Find new cartoons fills the list to the selected target. Refresh replaces the current list and remembers previously shown cartoons.</p>
+                </div>
+              </div>
+              <div class="panel form-panel settings-downloads">
+                <div class="settings-panel-head">
+                  <div>
+                    <h2>Downloads</h2>
+                    <p class="muted">Quality and local/device destinations.</p>
+                  </div>
+                </div>
+                <div class="settings-fields settings-fields-downloads">
+                  <label class="quality-field">Default download quality
+                  <select id="defaultDownloadQuality">
+                    <option value="360">360p</option><option value="480">480p</option><option value="720">720p</option><option value="1080">1080p</option>
+                  </select>
+                </label>
+                  <label class="theme-field">Theme
+                  <select id="appTheme">
+                    <option value="dark">Dark</option><option value="light">Light</option>
+                  </select>
+                </label>
+                  <label
+                    class="folder-field local-folder-field">Local downloads folder
+                  <span class="folder-picker-row"><input id="downloadFolder" type="text"><button id="browseDownloadFolderBtn" class="dark-btn browse-folder-btn" type="button" title="Choose folder"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5h6l2 2h10v9.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 9h18"/></svg><span>Browse</span></button></span>
+                </label>
+                  <label
+                    class="folder-field device-folder-field">Android device folder <input id="deviceFolder" type="text"></label>
+                  <p
+                    class="muted settings-note settings-full">Adaptive video and audio are downloaded separately when required and merged locally.</p>
+                </div>
+              </div>
+              <div class="panel form-panel settings-queries">
+                <h2>Search queries</h2>
+                <p class="muted">One query per line.</p>
+                <textarea id="queries" rows="8"></textarea>
+              </div>
+              <div class="panel form-panel settings-romanian">
+                <h2>Romanian hints</h2>
+                <p class="muted">Format: text | weight</p>
+                <textarea id="romanianHints" rows="8"></textarea>
+              </div>
+              <div class="panel form-panel settings-exclude">
+                <h2>Exclude hints</h2>
+                <p class="muted">One hard-exclude phrase per line.</p>
+                <textarea id="excludeHints" rows="8"></textarea>
+              </div>
+              <div class="panel form-panel settings-channels">
+                <h2>Channel rules</h2>
+                <p
+                  class="muted">Format: trusted | channel name/id | optional weight or blocked | channel name/id</p>
+                <textarea id="channelRules" rows="7"></textarea>
+              </div>
+              <div class="panel form-panel settings-storage">
+                <div class="settings-panel-head">
+                  <div>
+                    <h2>Storage maintenance</h2>
+                    <p class="muted"
+                      id="logRetention">Logs: 2 MB per file, two backups, 30 days of inactive history.</p>
+                  </div>
+                  <button id="refreshSourcesBtn"
+                    class="dark-btn action-btn storage-btn"
+                    type="button"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></svg><span>Refresh list</span></button>
+                </div>
+                <p
+                  class="muted">Files kept after a failed or cancelled device transfer stay here until you delete them. Select the sources you no longer need.</p>
+                <p id="sourceMessage" class="muted"
+                  role="status">Open Settings to load retained sources.</p>
+                <div id="retainedSources" class="retained-sources"></div>
+                <div class="source-actions">
+                  <span id="sourceSelection"
+                    class="muted">No sources selected</span>
+                  <button id="reviewSourcesBtn"
+                    class="dark-btn action-btn storage-btn" type="button"
+                    disabled><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg><span>Delete selected…</span></button>
+                </div>
+                <div id="sourceConfirmation" class="source-confirmation hidden"
+                  role="group" aria-label="Confirm source deletion">
+                  <p id="sourceConfirmationText"></p>
+                  <div class="source-confirmation-actions">
+                    <button id="cancelSourceDeletionBtn"
+                      class="dark-btn action-btn storage-btn"
+                      type="button"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><span>Keep files</span></button>
+                    <button id="confirmSourceDeletionBtn"
+                      class="primary action-btn storage-btn"
+                      type="button"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/></svg><span>Delete files permanently</span></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              class="settings-save"><span id="settingsSaved" class="muted"></span><button id="saveSettingsBtn" class="primary action-btn settings-save-btn"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><span>Save settings</span></button></div>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <div id="deviceModal" class="modal hidden">
+      <div class="modal-card">
+        <div
+          class="modal-head"><div><h2>Download to device</h2><p>Select an online Android device.</p></div><button id="closeDeviceModal" class="icon-btn">×</button></div>
+        <div id="devicePicker" class="picker"></div>
+      </div>
+    </div>
+    <div id="logModal" class="modal hidden">
+      <div class="modal-card log-modal-card">
+        <div
+          class="modal-head"><div><h2>Download log</h2><p id="logTitle">yt-dlp / FFmpeg / MTP output</p></div><button id="closeLogModal" class="icon-btn">×</button></div>
+        <pre id="jobLog" class="job-log">Loading…</pre>
+        <div
+          class="log-actions"><button id="refreshLogBtn" class="dark-btn">↻ Refresh log</button></div>
+      </div>
+    </div>
+    <div id="videoViewerModal" class="modal hidden">
+      <div class="modal-card video-viewer-card">
+        <div
+          class="modal-head video-viewer-head"><div><h2 id="videoViewerTitle">Video</h2><p>Playing inside Cartoon Downloader</p></div><button id="closeVideoViewer" class="icon-btn" aria-label="Close video">×</button></div>
+        <div class="video-viewer-stage">
+          <iframe id="youtubeViewer" class="hidden" title="YouTube video player"
+            src="about:blank"
+            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+            allowfullscreen></iframe>
+          <video id="localVideoViewer" class="hidden" controls playsinline
+            preload="metadata"></video>
+        </div>
+      </div>
+    </div>
+    <div id="toast" class="toast hidden"></div>
+    <div id="connectionStatus" class="connection-status hidden" role="status"
+      aria-live="polite"></div>
+    <div id="systemStatus" class="sr-only">Ready</div>
+    <script type="module" src="/static/app.js"></script>
+  </body>
+</html>
