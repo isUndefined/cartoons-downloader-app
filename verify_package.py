@@ -1,6 +1,7 @@
 """Offline portable-package verification; never opens the user's database."""
 
 import hashlib
+import json
 import re
 import subprocess
 import sys
@@ -11,6 +12,8 @@ from cartoon_downloader.tooling import Tooling
 
 def verify(root: Path) -> list[str]:
     errors = []
+    release = root / 'RELEASE.json'
+    compiled = release.is_file() and bool(json.loads(release.read_text(encoding='utf-8')).get('compiled_backend'))
     required = [
         'START_WINDOWS.bat', 'app.py', 'diagnostics.py',
         'runtime/python/python.exe', 'runtime/python/python313.dll',
@@ -37,14 +40,36 @@ def verify(root: Path) -> list[str]:
         'tools/webview2/Microsoft.Web.WebView2.Core.dll',
         'tools/webview2/Microsoft.Web.WebView2.WinForms.dll', 'tools/webview2/WebView2Loader.dll',
     ]
+    if compiled:
+        required = [name for name in required
+                    if name not in {'START_WINDOWS.bat', 'app.py', 'diagnostics.py'}
+                    and not name.startswith(('cartoon_downloader/', 'migrations/', 'runtime/python/Lib/'))
+                    and name not in {'runtime/python/python.exe', 'runtime/python/python313.dll'}
+                    and not (name.startswith('static/') and Path(name).suffix in {'.js', '.css', '.html', '.svg'})]
+        required.extend(['CartoonDownloader.exe', 'backend/CartoonDownloader.Backend.exe',
+                         'backend/python313.dll', 'backend/MtpCopy.dll',
+                         'runtime/nuitka/LICENSE.txt', 'runtime/nuitka/LICENSE-RUNTIME.txt'])
+        for name in ('cartoon_downloader', 'migrations', 'packaging', 'launcher-source',
+                     'app.py', 'diagnostics.py', 'verify_package.py', 'START_WINDOWS.bat',
+                     'runtime/python/python.exe'):
+            if (root / name).exists():
+                errors.append(f'Developer source/runtime in compiled release: {name}')
+        for folder in (root / 'backend', root / 'static'):
+            for path in folder.rglob('*'):
+                if path.is_file() and path.suffix.lower() in {
+                    '.py', '.pyw', '.pyc', '.pyo', '.sql', '.cs', '.ps1', '.pdb',
+                    '.c', '.h', '.lib', '.html', '.js', '.css', '.svg',
+                }:
+                    errors.append(f'Source/debug file in compiled release: {path.relative_to(root)}')
     required.extend(str(path.relative_to(root)) for path in Tooling(root).required_files().values())
     for name in required:
         if not (root / name).is_file():
             errors.append(f'Missing package file: {name}')
     migrations = sorted((root / 'migrations').glob('*.sql'))
-    if not migrations or migrations[0].name != '001_initial.sql':
+    if not compiled and (not migrations or migrations[0].name != '001_initial.sql'):
         errors.append('Initial database migration missing')
-    for path in [root / 'app.py', root / 'diagnostics.py', *(root / 'cartoon_downloader').glob('*.py')]:
+    sources = [] if compiled else [root / 'app.py', root / 'diagnostics.py', *(root / 'cartoon_downloader').glob('*.py')]
+    for path in sources:
         try:
             compile(path.read_text(encoding='utf-8'), str(path), 'exec')
         except (OSError, SyntaxError) as exc:
@@ -75,7 +100,10 @@ def verify(root: Path) -> list[str]:
 
 
 def main():
-    root = Path(__file__).resolve().parent
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--package', type=Path, default=Path(__file__).resolve().parent)
+    root = parser.parse_args().package.resolve()
     errors = verify(root)
     if not errors:
         tooling = Tooling(root)
@@ -87,6 +115,10 @@ def main():
             'FFmpeg': [str(tooling.ffmpeg), '-version'],
             'ffprobe': [str(tooling.ffprobe), '-version'],
         }
+        if (root / 'backend/CartoonDownloader.Backend.exe').is_file():
+            del commands['Python']
+            commands['Backend'] = [str(root / 'backend/CartoonDownloader.Backend.exe'), '--diagnostics',
+                                   '--data-dir', str(root / 'nonexistent-diagnostic-data')]
         for name, command in commands.items():
             try:
                 result = subprocess.run(command, capture_output=True, text=True,
@@ -95,13 +127,21 @@ def main():
                 if result.returncode:
                     errors.append(f'{name} cannot start: {result.stderr[-600:]}')
                 else:
+                    if name == 'Backend':
+                        try:
+                            details, _ = json.JSONDecoder().raw_decode(result.stdout[result.stdout.index('{'):])
+                            for component in ('engine', 'yt-dlp', 'deno', 'ffmpeg', 'ffprobe', 'python'):
+                                if not details[component]['ok']:
+                                    errors.append(f'Backend cannot locate {component}: {details[component]["path"]}')
+                        except (ValueError, KeyError, TypeError) as exc:
+                            errors.append(f'Invalid backend diagnostics: {exc}')
                     print(name + ': ' + result.stdout.splitlines()[0])
             except (OSError, subprocess.TimeoutExpired) as exc:
                 errors.append(f'{name} cannot start: {exc}')
     for error in errors:
         print('ERROR:', error, file=sys.stderr)
     if not errors:
-        print('Portable package: OK (offline; files, source, ES modules, hashes, tool startup)')
+        print('Package: OK (offline; files, code/resources, hashes, tool startup)')
     return 1 if errors else 0
 
 

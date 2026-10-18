@@ -75,49 +75,105 @@ begin
     Result := Result and ((Attributes and $10) = 0);
 end;
 
-procedure RemovePreviousPythonSymbols;
 var
-  Lines: TArrayOfString;
-  Index: Integer;
-  Prefix, RelativeName, FileName, SymbolPath, ManifestPath, ExpectedHash: String;
+  PreviousInventory: TArrayOfString;
+
+procedure RememberPreviousInventory;
+var
+  ManifestPath: String;
 begin
-  { Upgrades otherwise retain files omitted from the new payload. Only remove
-    unchanged symbols recorded as owned by the previous installer. }
-  if not IsPlainPath(ExpandConstant('{app}'), True) or
-     not IsPlainPath(ExpandConstant('{app}\runtime'), True) or
-     not IsPlainPath(ExpandConstant('{app}\runtime\python'), True) or
-     not IsPlainPath(ExpandConstant('{app}\runtime\python\DLLs'), True) then
+  SetArrayLength(PreviousInventory, 0);
+  if not IsPlainPath(ExpandConstant('{app}'), True) then
     Exit;
   ManifestPath := ExpandConstant('{app}\INSTALLED.sha256');
-  if not IsPlainPath(ManifestPath, False) then
+  if IsPlainPath(ManifestPath, False) then
+    LoadStringsFromFile(ManifestPath, PreviousInventory);
+end;
+
+function RetiredSource(const Name: String): Boolean;
+var
+  Extension: String;
+begin
+  Extension := Lowercase(ExtractFileExt(Name));
+  Result := (Name = 'app.py') or (Name = 'diagnostics.py') or
+    (Name = 'verify_package.py') or (Name = 'START_WINDOWS.bat') or
+    (Name = 'README.md') or
+    (Pos('cartoon_downloader/', Name) = 1) or
+    (Pos('migrations/', Name) = 1) or
+    (Pos('packaging/', Name) = 1) or
+    (Pos('launcher-source/', Name) = 1) or
+    ((Pos('runtime/python/', Name) = 1) and
+     (Pos('runtime/python/licenses/', Name) <> 1) and
+     (Name <> 'runtime/python/PYTHON.json')) or
+    ((Pos('static/', Name) = 1) and ((Extension = '.html') or
+     (Extension = '.css') or (Extension = '.js') or (Extension = '.svg')));
+end;
+
+function PlainInstalledFile(const RelativeName: String; var FullPath: String): Boolean;
+var
+  Remaining, Part, Parent: String;
+  Separator: Integer;
+begin
+  Result := False;
+  Remaining := RelativeName;
+  if (Remaining = '') or (Pos('\', Remaining) <> 0) or (Pos(':', Remaining) <> 0) then
     Exit;
-  if not LoadStringsFromFile(ManifestPath, Lines) then
+  Parent := ExpandConstant('{app}');
+  if not IsPlainPath(Parent, True) then
     Exit;
-  Prefix := 'runtime/python/DLLs/';
-  for Index := 0 to GetArrayLength(Lines) - 1 do begin
-    if Copy(Lines[Index], 65, 2) <> '  ' then
+  while True do begin
+    Separator := Pos('/', Remaining);
+    if Separator = 0 then
+      Part := Remaining
+    else
+      Part := Copy(Remaining, 1, Separator - 1);
+    if (Part = '') or (Part = '.') or (Part = '..') or
+       (Trim(Part) <> Part) or (Copy(Part, Length(Part), 1) = '.') then
+      Exit;
+    FullPath := Parent + '\' + Part;
+    if Separator = 0 then begin
+      Result := IsPlainPath(FullPath, False);
+      Exit;
+    end;
+    if not IsPlainPath(FullPath, True) then
+      Exit;
+    Parent := FullPath;
+    Delete(Remaining, 1, Separator);
+  end;
+end;
+
+procedure RemovePreviousSources;
+var
+  Index: Integer;
+  RelativeName, FullPath, Parent, AppPath, ExpectedHash: String;
+begin
+  { Only after the new payload is installed. Preserve modified/unlisted files
+    and never follow a redirected parent, traverse upward or delete user data. }
+  AppPath := ExpandConstant('{app}');
+  for Index := 0 to GetArrayLength(PreviousInventory) - 1 do begin
+    if Copy(PreviousInventory[Index], 65, 2) <> '  ' then
       Continue;
-    RelativeName := Copy(Lines[Index], 67, Length(Lines[Index]));
-    if Copy(RelativeName, 1, Length(Prefix)) <> Prefix then
+    RelativeName := Copy(PreviousInventory[Index], 67, Length(PreviousInventory[Index]));
+    if not RetiredSource(RelativeName) then
       Continue;
-    FileName := Copy(RelativeName, Length(Prefix) + 1, Length(RelativeName));
-    if (Length(FileName) <= 4) or (Lowercase(ExtractFileExt(FileName)) <> '.pdb') or
-       (Pos('/', FileName) <> 0) or (Pos('\', FileName) <> 0) or
-       (Pos(':', FileName) <> 0) then
+    if not PlainInstalledFile(RelativeName, FullPath) then
       Continue;
-    SymbolPath := ExpandConstant('{app}\runtime\python\DLLs\') + FileName;
-    if not IsPlainPath(SymbolPath, False) then
-      Continue;
-    ExpectedHash := Lowercase(Copy(Lines[Index], 1, 64));
+    ExpectedHash := Lowercase(Copy(PreviousInventory[Index], 1, 64));
     try
-      if Lowercase(GetSHA256OfFile(SymbolPath)) = ExpectedHash then begin
-        if DeleteFile(SymbolPath) then
-          Log('Removed previous Python debug symbol: ' + FileName)
-        else
-          Log('Could not remove previous Python debug symbol: ' + FileName);
+      if Lowercase(GetSHA256OfFile(FullPath)) = ExpectedHash then begin
+        if DeleteFile(FullPath) then begin
+          Log('Removed previous source/runtime file: ' + RelativeName);
+          Parent := ExtractFileDir(FullPath);
+          while (Parent <> AppPath) and IsPlainPath(Parent, True) do begin
+            if not RemoveDir(Parent) then
+              Break;
+            Parent := ExtractFileDir(Parent);
+          end;
+        end else
+          Log('Could not remove previous source/runtime file: ' + RelativeName);
       end;
     except
-      Log('Kept an unreadable previous Python debug symbol: ' + FileName);
+      Log('Kept an unreadable previous file: ' + RelativeName);
     end;
   end;
 end;
@@ -154,7 +210,7 @@ var
   RuntimePath: String;
 begin
   if CurStep = ssInstall then
-    RemovePreviousPythonSymbols;
+    RememberPreviousInventory;
   if CurStep = ssPostInstall then begin
     { Required by Microsoft for Fixed Version WebView2 on Windows 10, v120+. }
     RuntimePath := ExpandConstant('{app}\tools\webview2\runtime');
@@ -164,6 +220,7 @@ begin
       RaiseException('Cannot configure the bundled display engine permissions.');
     if Code <> 0 then
       RaiseException('Display engine permissions failed: ' + IntToStr(Code));
+    RemovePreviousSources;
   end;
 end;
 

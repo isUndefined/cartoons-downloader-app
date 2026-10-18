@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT))
 from cartoon_downloader import __version__
 from build_setup import check_previous_setup, digest
 from online import load_components
+from compiled_backend import check_toolchain
 
 
 def run_steps(steps: list[tuple[str, list[str]]], root: Path) -> None:
@@ -43,6 +44,7 @@ def main() -> int:
             raise RuntimeError('The Inno Setup compiler differs from packaging/installer-toolchain.json')
         if not args.offline:
             load_components(ROOT / 'packaging/online-components.json')
+        check_toolchain()
         package = ROOT / 'dist' / f'CartoonDownloader-{__version__}'
         variant = 'Setup' if args.offline else 'Online-Setup'
         filename = 'CartoonDownloader-Setup.exe' if args.offline else 'CartoonDownloader-Online-Setup.exe'

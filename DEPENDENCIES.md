@@ -20,10 +20,27 @@ Python включён в него. Версии и хеши скачиваемы
 | `tools/ffmpeg/` | FFmpeg/ffprobe n9.0.2 LGPL shared, все семь DLL, лицензия и метаданные |
 | `tools/webview2/` | Fixed Version Runtime 155.0.4283.62 x64, SDK DLL, лицензии и инвентарь |
 | `build/installer-tools/inno-7.1.0/` | Компилятор Inno Setup 7.1.0 x64 с `ISCC.exe` и `License.txt` |
+| `build/compiler-tools/` | Отдельный полный Python 3.13.16, Nuitka 4.3.1 и Zig 0.16.0 для компиляции |
 
-`runtime/` и `tools/` также можно скопировать из подготовленного portable-пакета
-этой версии. Компилятор Inno Setup поставляется отдельно.
+`tools/` также можно скопировать из подготовленного portable-пакета этой версии.
+В релизе 0.30.3 нет разработческого Python с исходниками стандартной библиотеки:
+`runtime/python/` для разработки нужно сохранять из исходной рабочей папки.
+Компилятор Inno Setup поставляется отдельно.
 Пользовательские `data/`, `downloads/`, `temp/` и `logs/` для сборки не нужны.
+
+Один раз подготовь компилятор backend (эта команда использует интернет):
+
+```powershell
+.\runtime\python\python.exe -B packaging/prepare_compiler.py
+```
+
+Она скачивает закреплённые архивы, сверяет SHA256 и устанавливает инструменты
+только в `build/compiler-tools/`. Системный Python и Visual Studio не требуются.
+Версии, URL и хеши находятся в `packaging/compiler-toolchain.json`, включая
+Dependency Walker 2.2 x64 для определения DLL. Он также нужен только при сборке.
+Для повторной подготовки из уже скачанных архивов добавь `--offline`.
+Сохраняй `build/compiler-tools/` и `build/installer-tools/` при очистке сборок.
+Обычный `BUILD_SETUP.bat` компилирует приложение без загрузок из сети.
 
 ## Закреплённые версии и источники
 

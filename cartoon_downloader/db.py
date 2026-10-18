@@ -7,6 +7,7 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+from .resources import migration_sources
 
 
 def now_iso() -> str:
@@ -130,18 +131,17 @@ class Database:
                 "CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL)"
             )
             applied = {r[0] for r in con.execute("SELECT version FROM schema_migrations")}
-        for path in sorted(self.migrations_dir.glob("*.sql")):
+        for name, sql in migration_sources(self.migrations_dir):
             try:
-                version = int(path.name.split("_", 1)[0])
+                version = int(name.split("_", 1)[0])
             except ValueError:
                 continue
             if version in applied:
                 continue
-            self._apply_migration(path, version)
+            self._apply_migration(name, version, sql)
             applied.add(version)
 
-    def _apply_migration(self, path: Path, version: int) -> None:
-        sql = path.read_text(encoding="utf-8")
+    def _apply_migration(self, name: str, version: int, sql: str) -> None:
         with self.tx() as con:
             # Python 3.13: legacy executescript() commits pending transactions.
             # PEP 249 mode keeps the SQL and its version record in one transaction.
@@ -152,7 +152,7 @@ class Database:
             try:
                 con.executescript(sql)
             except sqlite3.Error as exc:
-                exc.add_note(f"Migration: {path.name}")
+                exc.add_note(f"Migration: {name}")
                 raise
             finally:
                 # The transaction owner must still be able to commit/roll back.
@@ -160,10 +160,10 @@ class Database:
             try:
                 con.execute(
                     "INSERT INTO schema_migrations(version,name,applied_at) VALUES(?,?,?)",
-                    (version, path.name, now_iso()),
+                    (version, name, now_iso()),
                 )
             except sqlite3.Error as exc:
-                exc.add_note(f"Migration version registration: {path.name}")
+                exc.add_note(f"Migration version registration: {name}")
                 raise
 
     def _seed_defaults(self):

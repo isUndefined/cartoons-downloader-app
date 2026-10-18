@@ -1,4 +1,4 @@
-"""Build a Windows GUI launcher and an offline, allowlisted application folder.
+"""Build a Windows GUI launcher and a compiled, allowlisted application folder.
 
 Run with the bundled Python. Only build/ and a new child of dist/ are written;
 existing output directories are never replaced or recursively removed.
@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from cartoon_downloader import __version__
 from verify_package import verify
+from compiled_backend import build_backend, TEXT_ASSETS
 
 
 def digest(path: Path) -> str:
@@ -92,12 +93,28 @@ def main() -> int:
     print('Build workspace:', work, flush=True)
     # Explicit inputs exclude working databases, logs, media, test fixtures and
     # previous releases regardless of what else exists in the project folder.
-    for name in ('cartoon_downloader', 'migrations', 'static', 'runtime', 'tools', 'packaging'):
+    for name in ('tools',):
         copy_tree(ROOT / name, package / name)
-    for name in ('app.py', 'diagnostics.py', 'verify_package.py', 'START_WINDOWS.bat',
-                 'README.md', 'INSTALLATION.md', 'THIRD_PARTY_NOTICES.md', 'BUNDLED_COMPONENTS.sha256'):
+    copy_tree(ROOT / 'runtime/python/licenses', package / 'runtime/python/licenses')
+    shutil.copyfile(ROOT / 'runtime/python/PYTHON.json', package / 'runtime/python/PYTHON.json')
+    for path in sorted((ROOT / 'static').rglob('*')):
+        if path.is_file() and path.suffix.lower() not in TEXT_ASSETS:
+            target = package / 'static' / path.relative_to(ROOT / 'static')
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(path, target)
+    for name in ('THIRD_PARTY_NOTICES.md',):
         shutil.copyfile(ROOT / name, package / name)
-    sources = package / 'launcher-source'
+    guide = (ROOT / 'INSTALLATION.md').read_text(encoding='utf-8').split('## Как собрать установщик', 1)[0]
+    (package / 'INSTALLATION.md').write_text(guide.rstrip() + '\n', encoding='utf-8')
+    backend_metadata = build_backend(work, package)
+    run([str(compiler), '/nologo', '/target:library', '/platform:x64', '/optimize+', '/debug-',
+         '/out:' + str(package / 'backend/MtpCopy.dll'), str(ROOT / 'cartoon_downloader/mtp_copy.cs')])
+    # The development manifest also covers python.exe, which is not shipped.
+    component_lines = (ROOT / 'BUNDLED_COMPONENTS.sha256').read_text(encoding='utf-8').splitlines()
+    (package / 'BUNDLED_COMPONENTS.sha256').write_text(
+        '\n'.join(line for line in component_lines if line.split(maxsplit=1)[1].startswith('tools/'))
+        + '\n' + backend_metadata['backend_sha256'] + '  backend/CartoonDownloader.Backend.exe\n', encoding='utf-8')
+    sources = work / 'launcher-source'
     sources.mkdir()
     file_version = __version__ + '.0'
     launcher = sources / 'Launcher.cs'
@@ -112,7 +129,7 @@ def main() -> int:
     icon = package / 'CartoonDownloader.ico'
     run(['powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
          '-File', str(ROOT / 'packaging/make_icon.ps1'), '-Source',
-         str(package / 'static/assets/cartoon-logo.png'), '-Output', str(icon)])
+         str(ROOT / 'static/assets/cartoon-logo.png'), '-Output', str(icon)])
     executable = package / 'CartoonDownloader.exe'
     run([str(compiler), '/nologo', '/target:winexe', '/platform:x64', '/optimize+', '/debug-',
          '/reference:System.Windows.Forms.dll', '/reference:System.Drawing.dll',
@@ -121,25 +138,30 @@ def main() -> int:
          '/reference:' + str(package / 'Microsoft.Web.WebView2.WinForms.dll'),
          '/win32icon:' + str(icon), '/win32manifest:' + str(sources / 'app.manifest'),
          '/out:' + str(executable), str(launcher), str(desktop)])
-    errors = verify(package)
-    if errors:
-        raise RuntimeError('\n'.join(errors))
     manifest = {
         'product': 'Cartoon Downloader Desktop', 'version': __version__,
         'architecture': 'windows-x64', 'format': 'portable-folder',
-        'entrypoint': executable.name, 'runtime': 'bundled CPython',
+        'entrypoint': executable.name, 'runtime': 'Nuitka standalone native backend with bundled CPython libraries',
+        'compiled_backend': backend_metadata,
         'launcher_framework': '.NET Framework 4.6.2+ (Windows)',
         'ui': 'native WinForms window with bundled WebView2 Fixed Version',
         'webview2': json.loads((ROOT / 'tools/webview2/DEPENDENCY.json').read_text(encoding='utf-8')),
         'deno': json.loads((ROOT / 'tools/deno/DEPENDENCY.json').read_text(encoding='utf-8')),
         'ffmpeg': json.loads((ROOT / 'tools/ffmpeg/DEPENDENCY.json').read_text(encoding='utf-8')),
         'excluded_debug_extensions': ['.pdb'],
+        'excluded_sources': ['Python', 'SQL migrations', 'C#', 'packaging scripts', 'HTML/CSS/JS/SVG files'],
         'compiler_sha256': digest(compiler),
         'launcher_sha256': digest(executable),
         'source_version': file_version,
         'build_recipe': 'packaging/build_windows.py',
     }
     (package / 'RELEASE.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
+    errors = verify(package)
+    if errors:
+        raise RuntimeError('\n'.join(errors))
+    # Catch resource-root and missing runtime DLL failures before publication,
+    # without creating a database, profile or other user data in the package.
+    run([sys.executable, '-E', '-s', '-B', str(ROOT / 'verify_package.py'), '--package', str(package)])
     files = sorted(path for path in package.rglob('*') if path.is_file())
     checksums = ''.join(f'{digest(path)}  {path.relative_to(package).as_posix()}\n' for path in files)
     (package / 'PACKAGE.sha256').write_text(checksums, encoding='utf-8')
@@ -161,7 +183,7 @@ def main() -> int:
     # Required for unpackaged Fixed Version renderers on Windows 10, v120+.
     run(['icacls.exe', str(destination / 'tools/webview2/runtime'), '/grant',
          '*S-1-15-2-2:(OI)(CI)(RX)', '*S-1-15-2-1:(OI)(CI)(RX)', '/T', '/C', '/Q'])
-    work.rmdir()
+    # Keep compiler sources, logs and reports privately under ignored build/.
     print(json.dumps({'package': str(destination), 'version': __version__, 'files': len(files) + 1,
                       'launcher_sha256': manifest['launcher_sha256']}, ensure_ascii=False), flush=True)
     return 0

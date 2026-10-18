@@ -17,7 +17,6 @@ __pycache__/
 /dist/
 /build/
 /tests/
-/docs/*-20??????.md
 *.spec
 *.log
 .env

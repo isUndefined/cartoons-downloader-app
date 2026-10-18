@@ -7,12 +7,12 @@ import sys
 
 from cartoon_downloader.local_server import collect_diagnostics
 from cartoon_downloader.paths import application_paths
+from cartoon_downloader.resources import installation_root
 from cartoon_downloader import __version__
 
 
 def main(root=None, *, data_dir: Path | None = None):
-    installation = (Path(sys.executable).resolve().parent if getattr(sys, 'frozen', False)
-                    else Path(__file__).resolve().parent)
+    installation = installation_root()
     paths = application_paths(Path(root) if root is not None else installation, data_dir=data_dir)
     print(f'Cartoon Downloader Desktop v{__version__} diagnostics')
     print('Python:', sys.version.replace('\n', ' '))

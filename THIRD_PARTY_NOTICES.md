@@ -4,8 +4,21 @@ Cartoon Downloader Desktop bundles third-party runtime components so the applica
 
 ## Python
 
-A redistributable CPython runtime is bundled under `runtime/python/`.
+A redistributable CPython runtime used by the compiled backend is bundled under `backend/`.
 The CPython and bundled dependency license texts are included under `runtime/python/licenses/`.
+
+## Nuitka
+
+The backend is compiled with Nuitka 4.3.1, using the unmodified Nuitka runtime
+library under AGPLv3 with the Nuitka Runtime Library Exception, Version 1.0.
+These exact terms are included under `runtime/nuitka/`. The exception permits
+compiled independent applications to be distributed under their own terms.
+Nuitka compiler sources and the exception are available at
+https://github.com/Nuitka/Nuitka/tree/4.3.1 and in the pinned compiler source archive
+listed in `packaging/compiler-toolchain.json` in the source repository.
+The Zig 0.16.0 compiler is used only during compilation and is not installed with
+the application. Its runtime support is MIT-licensed; that license is preserved
+in `runtime/zig/LICENSE.txt`.
 
 ## yt-dlp
 

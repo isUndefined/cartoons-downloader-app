@@ -161,18 +161,14 @@ internal static class Launcher
                         return window.Failed ? 1 : 0;
                     }
                 }
-                string python = Path.Combine(root, "runtime", "python", "python.exe");
-                string script = Path.Combine(root, diagnostics ? "diagnostics.py" : "app.py");
-                if (!File.Exists(python) || !File.Exists(script))
+                string backend = Path.Combine(root, "backend", "CartoonDownloader.Backend.exe");
+                if (!File.Exists(backend))
                     throw new FileNotFoundException("The application package is incomplete. Keep CartoonDownloader.exe with its runtime and resource folders.");
-                // Ignore a system Python installation, PYTHONPATH and user site
-                // packages. -B also avoids cache writes in installed resources.
-                StringBuilder command = new StringBuilder("-E -s -B -u -X utf8 ");
-                command.Append(Quote(script));
+                StringBuilder command = new StringBuilder();
                 if (!quiet) command.Append(" --no-browser --desktop-host");
                 foreach (string argument in arguments)
-                    if (argument != "--diagnostics") command.Append(' ').Append(Quote(argument));
-                ProcessStartInfo start = new ProcessStartInfo(python, command.ToString());
+                    command.Append(' ').Append(Quote(argument));
+                ProcessStartInfo start = new ProcessStartInfo(backend, command.ToString());
                 start.WorkingDirectory = root;
                 start.UseShellExecute = false;
                 start.CreateNoWindow = true;

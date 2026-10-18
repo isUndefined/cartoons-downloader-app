@@ -15,9 +15,12 @@ REMOTE_FILENAME_BYTES = 120
 
 class DeviceManager:
     """Windows MTP device manager with no ADB dependency."""
-    def __init__(self, db: Database, root: Path):
+    def __init__(self, db: Database, root: Path, *, resource_root: Path | None = None):
         self.db = db
         self.root = Path(root)
+        self.copy_helper = ((Path(resource_root or root) / 'backend' / 'MtpCopy.dll')
+                            if '__compiled__' in globals()
+                            else Path(__file__).with_name('mtp_copy.cs'))
 
     @staticmethod
     def _ps(script: str, env: dict | None = None, timeout: int = 30, cancel_check=None) -> str:
@@ -192,7 +195,7 @@ if($actual -ne [long]$env:CD_EXPECTED_SIZE){ throw 'MTP file size verification f
             'CD_DEVICE':serial,'CD_FOLDER_PARTS':json.dumps(parts),
             'CD_SOURCE':str(local_file),'CD_FILENAME':filename,
             'CD_EXPECTED_SIZE':str(expected_size),
-            'CD_COPY_HELPER':str(Path(__file__).with_name('mtp_copy.cs').resolve()),
+            'CD_COPY_HELPER':str(self.copy_helper.resolve()),
         }, timeout=660, cancel_check=cancel_check)
         try:
             result = json.loads(out)

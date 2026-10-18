@@ -1,7 +1,7 @@
 ﻿# Cartoon Downloader Desktop
 
 Windows application for discovering YouTube cartoons, downloading videos and sending
-them to an Android device over MTP. Current version: **0.30.2**.
+them to an Android device over MTP. Current version: **0.30.3**.
 
 ## Features
 
@@ -13,7 +13,7 @@ them to an Android device over MTP. Current version: **0.30.2**.
 - Dark and light themes, including the native Windows 11 title bar.
 
 Python, SQLite and native JavaScript modules power the application. Its own WinForms
-window hosts a bundled WebView2 Fixed Version engine. Packaged releases include Python,
+window hosts a bundled WebView2 Fixed Version engine. Packaged releases include compiled Python code,
 yt-dlp, Deno, FFmpeg and ffprobe. No installed browser or system Python is needed.
 Internet access is used for installation, YouTube search and downloads.
 
@@ -38,6 +38,14 @@ dependency hashes and tool startup, checks frontend formatting, then builds the
 application and online installer. Failed checks stop the build. Previous clean builds are
 preserved under `build/`.
 
+From 0.30.3, Nuitka compiles the backend into native code. SQL migrations and text UI
+assets are embedded in that executable; application `.py`, `.sql`, `.cs`, frontend
+source files and build scripts are excluded from the installed folder. The MTP
+helper is a compiled DLL. This makes casual inspection harder; it cannot prevent
+reverse engineering or recovery of UI content served by the local application.
+Developer sources remain in this repository. Compiler dependencies live only in
+`build/compiler-tools/`; prepare them once using [DEPENDENCIES.md](DEPENDENCIES.md).
+
 Release packages exclude Python debug symbols, use the official Deno 2.9.7 release
 binary and share FFmpeg libraries between ffmpeg and ffprobe. Keep all files in
 `tools/ffmpeg/` together. WebView2 remains fully bundled. Dependency origins and
@@ -54,7 +62,7 @@ Keep the installer AppId unchanged.
 ```
 
 Output: `dist/CartoonDownloader-<version>-Online-Setup/CartoonDownloader-Online-Setup.exe`.
-Python, application files and license terms are embedded in the installer. It downloads
+The compiled backend, its required Python libraries and license terms are embedded in the installer. It downloads
 pinned yt-dlp, Deno, FFmpeg and WebView2 components over HTTPS, verifies their archives
 and every required extracted file, then installs the application. Download failures
 leave the existing installation unchanged. The installed window continues to use its

@@ -10,11 +10,12 @@ import urllib.request
 from pathlib import Path
 from cartoon_downloader.local_server import create_server
 from cartoon_downloader.paths import application_paths
+from cartoon_downloader.resources import installation_root
 from cartoon_downloader import __version__
 
 
 def root_dir():
-    return Path(sys.executable).resolve().parent if getattr(sys, 'frozen', False) else Path(__file__).resolve().parent
+    return installation_root()
 
 
 def open_ui(url: str, *, profile_dir: Path | None = None):

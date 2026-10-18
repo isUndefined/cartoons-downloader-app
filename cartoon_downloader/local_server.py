@@ -18,11 +18,14 @@ from .ui_lifetime import UiLifetime
 from .media import byte_range
 from .runtime import RuntimeSnapshots
 from .logs import LogStore
+from .resources import embedded_static
 
 def collect_diagnostics(root: Path):
     import sys
     from .tooling import Tooling
     tooling = Tooling(root)
+    python_path = (Path(root) / 'backend/CartoonDownloader.Backend.exe'
+                   if '__compiled__' in globals() else Path(sys.executable))
 
     def item(path):
         ok = path.is_file()
@@ -34,7 +37,7 @@ def collect_diagnostics(root: Path):
         },
         'yt-dlp': item(tooling.ytdlp), 'deno': item(tooling.deno),
         'ffmpeg': item(tooling.ffmpeg), 'ffprobe': item(tooling.ffprobe),
-        'python': {'ok': True, 'path': sys.executable, 'error': None},
+        'python': item(python_path),
         'device_transport': {
             'ok': os.name == 'nt', 'path': 'Windows MTP' if os.name == 'nt' else '',
             'error': None if os.name == 'nt' else 'Windows only',
@@ -54,7 +57,7 @@ class LocalApplication:
             self.db.recover_interrupted_jobs()
             self.logs = LogStore(self.root, self.db)
             self.logs.prune()
-            self.devices = DeviceManager(self.db, self.root)
+            self.devices = DeviceManager(self.db, self.root, resource_root=self.resource_root)
             self.discovery = DiscoveryManager(self.db, self.root, self.logs, resource_root=self.resource_root)
             self.downloads = DownloadQueue(self.db, self.devices, self.root, self.logs, resource_root=self.resource_root)
             self.runtime = RuntimeSnapshots(self.db, self.discovery)
@@ -293,9 +296,11 @@ def make_handler(app: LocalApplication):
             target = (base / rel).resolve()
             if base not in target.parents and target != base:
                 return self.send_error(403)
-            if not target.is_file():
-                return self.send_error(404)
-            data = target.read_bytes()
+            data = embedded_static(target.relative_to(base).as_posix())
+            if data is None:
+                if not target.is_file():
+                    return self.send_error(404)
+                data = target.read_bytes()
             ctype = mimetypes.guess_type(str(target))[0] or 'application/octet-stream'
             self.send_response(200)
             self.send_header('Content-Type', ctype)
