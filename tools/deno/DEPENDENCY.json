@@ -1,0 +1,12 @@
+{
+  "name": "Deno",
+  "version": "2.9.7",
+  "architecture": "windows-x86_64",
+  "build": "stable, release",
+  "release_url": "https://github.com/denoland/deno/releases/tag/v2.9.7",
+  "archive_url": "https://github.com/denoland/deno/releases/download/v2.9.7/deno-x86_64-pc-windows-msvc.zip",
+  "archive_sha256": "a0c3101b4158d1dfb7d6a78a7bf0f3de80c96bb423c152beec8beb22786f2238",
+  "executable_sha256": "e020f3e232bd16e33768dee528e5983349c962952051ced0a5d58ad42f5d9b33",
+  "executable_bytes": 97462048,
+  "license": "MIT"
+}

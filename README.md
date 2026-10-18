@@ -1,7 +1,7 @@
 ﻿# Cartoon Downloader Desktop
 
 Windows application for discovering YouTube cartoons, downloading videos and sending
-them to an Android device over MTP. Current version: **0.30.0**.
+them to an Android device over MTP. Current version: **0.30.2**.
 
 ## Features
 
@@ -15,7 +15,7 @@ them to an Android device over MTP. Current version: **0.30.0**.
 Python, SQLite and native JavaScript modules power the application. Its own WinForms
 window hosts a bundled WebView2 Fixed Version engine. Packaged releases include Python,
 yt-dlp, Deno, FFmpeg and ffprobe. No installed browser or system Python is needed.
-Internet access is used for YouTube search and downloads.
+Internet access is used for installation, YouTube search and downloads.
 
 ## Source repository
 
@@ -35,8 +35,14 @@ In a release folder, run `CartoonDownloader.exe` and keep its resource folders t
 
 In the prepared source workspace, double-click **BUILD_SETUP.bat**. It verifies files,
 dependency hashes and tool startup, checks frontend formatting, then builds the
-application and installer. Failed checks stop the build. Previous clean builds are
+application and online installer. Failed checks stop the build. Previous clean builds are
 preserved under `build/`.
+
+Release packages exclude Python debug symbols, use the official Deno 2.9.7 release
+binary and share FFmpeg libraries between ffmpeg and ffprobe. Keep all files in
+`tools/ffmpeg/` together. WebView2 remains fully bundled. Dependency origins and
+archive hashes are recorded in each component's `DEPENDENCY.json`; executable
+and FFmpeg DLL hashes are checked through `BUNDLED_COMPONENTS.sha256`.
 
 Increase `__version__` in `cartoon_downloader/__init__.py` before publishing an update.
 Keep the installer AppId unchanged.
@@ -47,7 +53,17 @@ Keep the installer AppId unchanged.
 .\tools\deno\deno.exe fmt --check static
 ```
 
-Output: `dist/CartoonDownloader-<version>-Setup/CartoonDownloader-Setup.exe`.
+Output: `dist/CartoonDownloader-<version>-Online-Setup/CartoonDownloader-Online-Setup.exe`.
+Python, application files and license terms are embedded in the installer. It downloads
+pinned yt-dlp, Deno, FFmpeg and WebView2 components over HTTPS, verifies their archives
+and every required extracted file, then installs the application. Download failures
+leave the existing installation unchanged. The installed window continues to use its
+private Fixed Version WebView2 engine. No component downloads occur at app startup.
+
+`BUILD_SETUP.bat --offline` builds the full installer instead. Both build modes are
+offline; network access is required by the online installer when installing.
+Download versions, URLs, archive hashes and directory layouts are pinned in
+`packaging/online-components.json`.
 
 See [setup.md](setup.md) for building and [INSTALLATION.md](INSTALLATION.md) for
 installation, updates and removal. For source development, build the package once;

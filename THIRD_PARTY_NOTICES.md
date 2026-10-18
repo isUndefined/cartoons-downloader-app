@@ -16,11 +16,19 @@ yt-dlp's project source is licensed under the Unlicense. The standalone Windows 
 
 A Deno JavaScript runtime is bundled under `tools/deno/` and is licensed under the MIT License.
 The license text is included in `tools/deno/LICENSE.txt`.
+The official 2.9.7 release binary, archive origin and SHA256 are recorded in
+`tools/deno/DEPENDENCY.json`.
 
 ## FFmpeg
 
-FFmpeg and ffprobe are bundled under `tools/ffmpeg/` from an LGPL Windows build.
-The included license text is at `tools/ffmpeg/LICENSE.txt`.
+FFmpeg and ffprobe n9.0.2-28-g669f5ab083-20261018 are bundled under `tools/ffmpeg/`
+from BtbN's Windows x64 LGPL shared build, with the seven shared FFmpeg libraries.
+The included LGPL v3 license text is at `tools/ffmpeg/LICENSE.txt`.
+Build origins, the upstream source commit and archive SHA256 are recorded in
+`tools/ffmpeg/DEPENDENCY.json`. The upstream source is available at
+https://github.com/FFmpeg/FFmpeg/commit/669f5ab083 and build scripts at
+https://github.com/BtbN/FFmpeg-Builds. `ffplay.exe` and upstream documentation are
+not used or shipped. Keep the shared libraries beside the two executables.
 
 ## Lucide Icons
 

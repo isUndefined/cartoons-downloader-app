@@ -1,4 +1,4 @@
-"""Build an offline per-user Windows installer from an exact verified package.
+"""Build a per-user Windows installer from an exact verified package.
 
 No downloads occur here. Prepare the pinned Inno Setup compiler under build/
 first, then run with the bundled Python. Output is a new directory under dist/.
@@ -20,6 +20,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from verify_package import verify
+from online import load_components, write_online_inputs
 
 APP_ID = '{B148E74E-40DC-4F99-86BD-208F661609A6}'
 
@@ -63,17 +64,18 @@ def inno_string(value: Path | str) -> str:
     return '"' + value + '"'
 
 
-def check_previous_setup(directory: Path) -> None:
+def check_previous_setup(directory: Path, *, online: bool = False) -> None:
     if directory.is_symlink() or directory.is_junction():
         raise RuntimeError('Refusing to archive a redirected installer output')
-    expected = {'CartoonDownloader-Setup.exe', 'SETUP.json', 'SHA256SUMS.txt', 'BUILD.log'}
+    filename = 'CartoonDownloader-Online-Setup.exe' if online else 'CartoonDownloader-Setup.exe'
+    expected = {filename, 'SETUP.json', 'SHA256SUMS.txt', 'BUILD.log'}
     entries = list(directory.iterdir())
     if {path.name for path in entries} != expected or any(
             not path.is_file() or path.is_symlink() or path.is_junction() for path in entries):
         raise RuntimeError('Existing installer output contains unknown files; it will not be moved')
     metadata = json.loads((directory / 'SETUP.json').read_text(encoding='utf-8'))
     if (metadata.get('product') != 'Cartoon Downloader Desktop'
-            or digest(directory / 'CartoonDownloader-Setup.exe') != metadata.get('installer_sha256')):
+            or digest(directory / filename) != metadata.get('installer_sha256')):
         raise RuntimeError('Existing installer output is not an intact generated build')
 
 
@@ -84,6 +86,7 @@ def main() -> int:
     parser.add_argument('--iscc', type=Path, default=ROOT / 'build/installer-tools/inno-7.1.0/ISCC.exe')
     parser.add_argument('--archive-existing', action='store_true',
                         help='Preserve an existing clean installer under build/ after successful compilation')
+    parser.add_argument('--online', action='store_true', help='Download pinned tools during installation')
     args = parser.parse_args()
     if os.name != 'nt':
         parser.error('Windows is required')
@@ -102,17 +105,26 @@ def main() -> int:
     lock = json.loads((ROOT / 'packaging/installer-toolchain.json').read_text(encoding='utf-8'))
     if not compiler.is_file() or digest(compiler) != lock['compiler_sha256']:
         raise RuntimeError('The pinned Inno Setup compiler is missing or changed')
-    destination = ROOT / 'dist' / f'CartoonDownloader-{version}-Setup'
+    variant = 'Online-Setup' if args.online else 'Setup'
+    filename = 'CartoonDownloader-Online-Setup.exe' if args.online else 'CartoonDownloader-Setup.exe'
+    destination = ROOT / 'dist' / f'CartoonDownloader-{version}-{variant}'
     if destination.exists() and not args.archive_existing:
         parser.error('Installer output already exists; preserve it and choose a new app version')
     if destination.exists():
-        check_previous_setup(destination)
+        check_previous_setup(destination, online=args.online)
     work = Path(tempfile.mkdtemp(prefix='setup-', dir=ROOT / 'build'))
     output = work / 'output'
     output.mkdir()
     print('Installer build workspace:', work, flush=True)
     shutil.copyfile(ROOT / 'packaging/installer.iss', work / 'installer.iss')
+    components = []
+    online_inputs = {'mapping': {}, 'download_bytes': 0, 'external_bytes': 0}
+    if args.online:
+        components = load_components(ROOT / 'packaging/online-components.json')
+        online_inputs = write_online_inputs(work, package, files, components, digest)
+        shutil.copyfile(ROOT / 'packaging/online.iss', work / 'online.iss')
     (work / 'BuildConfig.iss').write_text(
+        ('#define OnlineInstaller\n' if args.online else '') +
         f'#define AppVersion {inno_string(version)}\n'
         f'#define PackageDir {inno_string(package)}\n'
         f'#define OutputDir {inno_string(output)}\n', encoding='utf-8-sig')
@@ -130,7 +142,15 @@ def main() -> int:
     owned = []
     for relative in files:
         folder = '{app}' if relative.parent == Path('.') else '{app}\\' + str(relative.parent)
-        payload.append(f'Source: {inno_string(package / relative)}; DestDir: {inno_string(folder)}; Flags: ignoreversion\n')
+        external = online_inputs['mapping'].get(relative.as_posix())
+        if external:
+            _component, staged = external
+            source = '{tmp}\\' + staged
+            payload.append(f'Source: {inno_string(source)}; DestDir: {inno_string(folder)}; '
+                           f'DestName: {inno_string(relative.name)}; ExternalSize: {(package / relative).stat().st_size}; '
+                           f'Hash: "{digest(package / relative)}"; Flags: external ignoreversion\n')
+        else:
+            payload.append(f'Source: {inno_string(package / relative)}; DestDir: {inno_string(folder)}; Flags: ignoreversion\n')
         owned.append(f'{digest(package / relative)}  {relative.as_posix()}\n')
     for source, name in (('InstallationTerms.txt', 'INSTALLATION-TERMS.txt'),
                          ('installed.marker', 'installed.marker'), ('INSTALLATION.md', 'INSTALLATION.md'),
@@ -141,6 +161,8 @@ def main() -> int:
             owned.append(f'{digest(work / source)}  {name}\n')
     (work / 'INSTALLED.sha256').write_text(''.join(owned), encoding='utf-8')
     payload.append(f'Source: {inno_string(work / "INSTALLED.sha256")}; DestDir: "{{app}}"; Flags: ignoreversion\n')
+    if args.online:
+        payload.append(f'Source: {inno_string(work / "OnlineFiles.sha256")}; Flags: dontcopy\n')
     (work / 'Payload.iss').write_text(''.join(payload), encoding='utf-8-sig')
     with (work / 'compile.log').open('w', encoding='utf-8') as log:
         result = subprocess.run([str(compiler), str(work / 'installer.iss')], cwd=work,
@@ -148,7 +170,7 @@ def main() -> int:
                                 creationflags=subprocess.CREATE_NO_WINDOW)
     if result.returncode:
         raise RuntimeError((work / 'compile.log').read_text(encoding='utf-8', errors='replace')[-6000:])
-    installer = output / 'CartoonDownloader-Setup.exe'
+    installer = output / filename
     if not installer.is_file():
         raise RuntimeError('Compiler did not produce the installer')
     setup_metadata = {'product': metadata['product'], 'version': version, 'app_id': APP_ID,
@@ -157,13 +179,15 @@ def main() -> int:
                       'source_package': str(package.relative_to(ROOT)),
                       'compiler': lock, 'installer_sha256': digest(installer),
                       'installer_bytes': installer.stat().st_size,
-                      'signed': False, 'recipe': 'packaging/build_setup.py'}
+                      'signed': False, 'recipe': 'packaging/build_setup.py',
+                      'installation_mode': 'online' if args.online else 'offline',
+                      'download_bytes': online_inputs['download_bytes'], 'downloads': components}
     (output / 'SETUP.json').write_text(json.dumps(setup_metadata, indent=2) + '\n', encoding='utf-8')
     (output / 'SHA256SUMS.txt').write_text(f'{digest(installer)}  {installer.name}\n', encoding='utf-8')
     shutil.copyfile(work / 'compile.log', output / 'BUILD.log')
     if destination.exists():
-        check_previous_setup(destination)
-        archive = ROOT / 'build' / ('previous-setup-' + uuid.uuid4().hex)
+        check_previous_setup(destination, online=args.online)
+        archive = ROOT / 'build' / ('previous-' + variant.lower() + '-' + uuid.uuid4().hex)
         if (not destination.resolve().is_relative_to((ROOT / 'dist').resolve())
                 or not archive.resolve().is_relative_to((ROOT / 'build').resolve())):
             raise RuntimeError('Unsafe installer archive path')

@@ -40,7 +40,8 @@ def copy_tree(source: Path, destination: Path) -> None:
         raise RuntimeError(f'Refusing redirected package input: {source}')
     destination.mkdir(parents=True)
     for item in sorted(source.iterdir()):
-        if item.name == '__pycache__' or item.suffix == '.pyc':
+        # Symbols are useful in the development runtime, but not in a release.
+        if item.name == '__pycache__' or item.suffix.lower() in {'.pyc', '.pdb'}:
             continue
         if item.is_symlink() or item.is_junction():
             raise RuntimeError(f'Refusing redirected package input: {item}')
@@ -130,6 +131,9 @@ def main() -> int:
         'launcher_framework': '.NET Framework 4.6.2+ (Windows)',
         'ui': 'native WinForms window with bundled WebView2 Fixed Version',
         'webview2': json.loads((ROOT / 'tools/webview2/DEPENDENCY.json').read_text(encoding='utf-8')),
+        'deno': json.loads((ROOT / 'tools/deno/DEPENDENCY.json').read_text(encoding='utf-8')),
+        'ffmpeg': json.loads((ROOT / 'tools/ffmpeg/DEPENDENCY.json').read_text(encoding='utf-8')),
+        'excluded_debug_extensions': ['.pdb'],
         'compiler_sha256': digest(compiler),
         'launcher_sha256': digest(executable),
         'source_version': file_version,

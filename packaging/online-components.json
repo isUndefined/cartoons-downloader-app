@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "architecture": "windows-x64",
+  "components": [
+    {
+      "id": "yt-dlp",
+      "label": "YouTube downloader",
+      "url": "https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/download/2026.10.10.233141/yt-dlp.exe",
+      "sha256": "e7cafc44db8aa433da8dd78303b9157f2c1dd509c4cbfcd8418081b7e1d26a7a",
+      "download_bytes": 17842237,
+      "format": "file",
+      "package_root": "tools/yt-dlp",
+      "archive_prefix": "",
+      "files": [
+        "yt-dlp.exe"
+      ]
+    },
+    {
+      "id": "deno",
+      "label": "Deno 2.9.7",
+      "url": "https://github.com/denoland/deno/releases/download/v2.9.7/deno-x86_64-pc-windows-msvc.zip",
+      "sha256": "a0c3101b4158d1dfb7d6a78a7bf0f3de80c96bb423c152beec8beb22786f2238",
+      "download_bytes": 42630221,
+      "format": "zip",
+      "package_root": "tools/deno",
+      "archive_prefix": "",
+      "files": [
+        "deno.exe"
+      ]
+    },
+    {
+      "id": "ffmpeg",
+      "label": "Video and audio tools",
+      "url": "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-10-18-13-01/ffmpeg-n9.0.2-28-g669f5ab083-win64-lgpl-shared-9.0.zip",
+      "sha256": "bc5a0e82b643605ae067f10aacdb4fcd27747779deefa52275d600695b2b1d48",
+      "download_bytes": 77232696,
+      "format": "zip",
+      "package_root": "tools/ffmpeg",
+      "archive_prefix": "ffmpeg-n9.0.2-28-g669f5ab083-win64-lgpl-shared-9.0/bin",
+      "files": [
+        "avcodec-63.dll",
+        "avdevice-63.dll",
+        "avfilter-12.dll",
+        "avformat-63.dll",
+        "avutil-61.dll",
+        "ffmpeg.exe",
+        "ffprobe.exe",
+        "swresample-7.dll",
+        "swscale-10.dll"
+      ]
+    },
+    {
+      "id": "webview2",
+      "label": "Application display engine",
+      "url": "https://msedge.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/232cf50b-3980-4531-afbb-779f446d7de1/Microsoft.WebView2.FixedVersionRuntime.155.0.4283.62.x64.cab",
+      "sha256": "cf54aa717a0ebd05b40e87620724583cb6eb0a5b8b64764cc11e42822f68bf6c",
+      "download_bytes": 310492238,
+      "format": "cab",
+      "package_root": "tools/webview2/runtime",
+      "archive_prefix": "Microsoft.WebView2.FixedVersionRuntime.155.0.4283.62.x64"
+    }
+  ]
+}

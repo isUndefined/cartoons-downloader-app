@@ -3,6 +3,9 @@
 В Git находятся исходники, лицензии и метаданные. Готовые EXE/DLL, стандартная
 библиотека Python и WebView2 Runtime хранятся вне Git.
 Сборка и запуск сами зависимости не скачивают.
+Основной онлайн-установщик скачивает yt-dlp, Deno, FFmpeg и WebView2 при установке.
+Python включён в него. Версии и хеши скачиваемых архивов закреплены в
+`packaging/online-components.json`; неподтверждённые файлы не устанавливаются.
 
 ## Подготовка новой рабочей папки
 
@@ -13,8 +16,8 @@
 | --- | --- |
 | `runtime/python/` | Полный CPython 3.13.16 x64 со стандартной библиотекой и лицензиями |
 | `tools/yt-dlp/` | `yt-dlp.exe` и лицензии |
-| `tools/deno/` | `deno.exe` и лицензия |
-| `tools/ffmpeg/` | `ffmpeg.exe`, `ffprobe.exe` и лицензия |
+| `tools/deno/` | Официальная Deno 2.9.7 `stable, release`, лицензия и метаданные |
+| `tools/ffmpeg/` | FFmpeg/ffprobe n9.0.2 LGPL shared, все семь DLL, лицензия и метаданные |
 | `tools/webview2/` | Fixed Version Runtime 155.0.4283.62 x64, SDK DLL, лицензии и инвентарь |
 | `build/installer-tools/inno-7.1.0/` | Компилятор Inno Setup 7.1.0 x64 с `ISCC.exe` и `License.txt` |
 
@@ -24,7 +27,9 @@
 
 ## Закреплённые версии и источники
 
-- `BUNDLED_COMPONENTS.sha256` — SHA256 Python и медиапрограмм.
+- `BUNDLED_COMPONENTS.sha256` — SHA256 Python, медиапрограмм и всех DLL FFmpeg.
+- `tools/deno/DEPENDENCY.json` — источник и SHA256 официальной release-сборки Deno.
+- `tools/ffmpeg/DEPENDENCY.json` — источник, вариант сборки и SHA256 архива FFmpeg.
 - `runtime/python/PYTHON.json` — версия и параметры Python.
 - `tools/webview2/DEPENDENCY.json` — версии, URL и SHA256 архивов Runtime и SDK.
 - `tools/webview2/FILES.sha256` — инвентарь WebView2.
@@ -38,6 +43,10 @@
 
 Сохраняй лицензии рядом с компонентами.
 Дополнительные условия — в [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+Начиная с 0.30.1 сборщик не включает `.pdb` в приложение. Их можно сохранять в
+рабочем Python для отладки. FFmpeg использует общие DLL: переносить только два EXE
+без остальных файлов `tools/ffmpeg/` нельзя.
 
 ## Проверка готовности
 

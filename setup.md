@@ -6,15 +6,30 @@
 
 1. Возьмёт версию из `cartoon_downloader/__init__.py` и проверит компоненты сборки.
 2. Проверит файлы приложения, хеши и запуск встроенных инструментов, форматирование интерфейса.
-3. Соберёт приложение и установщик, затем покажет путь к готовому EXE.
+3. Соберёт приложение и онлайн-установщик, затем покажет путь к готовому EXE.
+
+Основной результат — `CartoonDownloader-Online-Setup.exe`. В него входят Python,
+приложение и лицензии. yt-dlp, Deno, FFmpeg и WebView2 скачиваются при установке;
+версии и SHA256 закреплены в `packaging/online-components.json`.
+Сначала проверяется весь скачанный комплект, затем меняется установленное приложение.
+Окно приложения использует прежний собственный Fixed Version WebView2.
+
+Если нужна полная автономная поставка, запусти `BUILD_SETUP.bat --offline`.
+Сборка обоих вариантов не обращается к сети: бинарные компоненты должны быть
+подготовлены в рабочей папке. Интернет нужен при запуске онлайн-установщика.
 
 При ошибке он остановится, а окно останется открытым с текстом ошибки.
 Чистые сборки с тем же номером сохраняются в `build/previous-release-*` и
 `build/previous-setup-*`. Если прежняя portable-папка содержит пользовательские
 данные, BAT сохранит её и попросит повысить версию.
 
-Для выпуска нового обновления сначала повысь `__version__`, например до `0.30.1`.
+Для выпуска нового обновления сначала повысь `__version__`, например до `0.30.3`.
 BAT не меняет номер версии самостоятельно. Команды по одной запускать не нужно.
+
+С версии 0.30.1 упаковка исключает отладочные `.pdb`, использует release-сборку
+Deno и FFmpeg с общими DLL. При обновлении установщик удаляет старые символы Python
+только при совпадении SHA256 с инвентарём предыдущей установки. Изменённые,
+неучтённые файлы и пути через junction/символические ссылки сохраняются.
 
 Дополнительно из PowerShell можно проверить только готовность к сборке:
 
@@ -36,7 +51,7 @@ BAT не меняет номер версии самостоятельно. Ко
 После внесения изменений повысь `__version__` в `cartoon_downloader/__init__.py`, например:
 
 ```python
-__version__ = "0.30.1"
+__version__ = "0.30.3"
 ```
 
 Версия автоматически попадёт в EXE и установщик. AppId в `packaging/installer.iss`
@@ -55,7 +70,7 @@ __version__ = "0.30.1"
 
 ```powershell
 .\runtime\python\python.exe -B packaging/build_windows.py
-.\runtime\python\python.exe -B packaging/build_setup.py --package dist/CartoonDownloader-0.30.1
+.\runtime\python\python.exe -B packaging/build_setup.py --package dist/CartoonDownloader-0.30.3 --online
 ```
 
 В последней команде используй номер из `__version__`. Если первая команда завершилась
@@ -64,11 +79,12 @@ __version__ = "0.30.1"
 Готовый установщик для этого примера:
 
 ```text
-dist/CartoonDownloader-0.30.1-Setup/CartoonDownloader-Setup.exe
+dist/CartoonDownloader-0.30.3-Online-Setup/CartoonDownloader-Online-Setup.exe
 ```
 
 Рядом находятся `SHA256SUMS.txt`, `SETUP.json` и `BUILD.log`.
-Для установки пользователю достаточно одного `CartoonDownloader-Setup.exe`.
+Для установки пользователю достаточно одного `CartoonDownloader-Online-Setup.exe`
+и интернет-соединения. После установки компоненты уже находятся на диске.
 
 ## Что нужно сохранить в проекте
 
@@ -90,7 +106,7 @@ dist/CartoonDownloader-0.30.1-Setup/CartoonDownloader-Setup.exe
 и сборщик установщика отклонит такой пакет. Для ручной проверки окна с отдельными данными:
 
 ```powershell
-.\dist\CartoonDownloader-0.30.1\CartoonDownloader.exe --data-dir "$env:TEMP\CartoonDownloader-review-0.30.1"
+.\dist\CartoonDownloader-0.30.3\CartoonDownloader.exe --data-dir "$env:TEMP\CartoonDownloader-review-0.30.1"
 ```
 
 Перед выпуском проверь установку, обновление и удаление на отдельной Windows.

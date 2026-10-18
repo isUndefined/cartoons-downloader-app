@@ -30,6 +30,7 @@ def verify(root: Path) -> list[str]:
         'THIRD_PARTY_NOTICES.md', 'BUNDLED_COMPONENTS.sha256',
         'tools/yt-dlp/THIRD_PARTY_LICENSES.txt',
         'tools/ffmpeg/LICENSE.txt', 'tools/deno/LICENSE.txt',
+        'tools/ffmpeg/DEPENDENCY.json', 'tools/deno/DEPENDENCY.json',
         'tools/webview2/DEPENDENCY.json', 'tools/webview2/FILES.sha256',
         'tools/webview2/LICENSE.txt', 'tools/webview2/runtime/msedgewebview2.exe',
         'tools/webview2/RUNTIME-LICENSE.txt', 'tools/webview2/RUNTIME-LICENSE.html',

@@ -35,7 +35,7 @@ __pycache__/
 /tools/*/*
 !/tools/*/LICENSE.txt
 !/tools/*/THIRD_PARTY_LICENSES.txt
-!/tools/webview2/DEPENDENCY.json
+!/tools/*/DEPENDENCY.json
 !/tools/webview2/FILES.sha256
 !/tools/webview2/RUNTIME-LICENSE.txt
 !/tools/webview2/RUNTIME-LICENSE.html
